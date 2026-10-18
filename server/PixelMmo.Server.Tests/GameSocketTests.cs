@@ -86,8 +86,8 @@ public sealed class GameSocketTests
             using var rejected = await ReceiveMatchingAsync(players[0].Socket, "error", item => item.GetProperty("code").GetString() == "unknown-command");
             Assert.Equal("unknown-command", rejected.RootElement.GetProperty("code").GetString());
 
-            await players[0].Socket.DisposeAsync();
-            var reconnect = await app.GetTestServer().CreateWebSocketClient().ConnectAsync(new Uri("ws://localhost/ws/game"));
+            players[0].Socket.Dispose();
+            var reconnect = await app.GetTestServer().CreateWebSocketClient().ConnectAsync(new Uri("ws://localhost/ws/game"), CancellationToken.None);
             try
             {
                 await SendAsync(reconnect, new { type = "auth", version = 2, accessToken = $"{players[0].OwnerId:N}.test-access-token" });
@@ -99,11 +99,11 @@ public sealed class GameSocketTests
                 Assert.Equal(9, saved.GetProperty("x").GetInt32());
                 Assert.Equal(8, saved.GetProperty("y").GetInt32());
             }
-            finally { await reconnect.DisposeAsync(); }
+            finally { reconnect.Dispose(); }
         }
         finally
         {
-            foreach (var player in players) await player.Socket.DisposeAsync();
+            foreach (var player in players) player.Socket.Dispose();
             await app.StopAsync();
         }
     }
@@ -112,7 +112,7 @@ public sealed class GameSocketTests
     {
         var owner = Guid.NewGuid();
         await TestDatabase.SeedOwnerAsync(owner);
-        var socket = await app.GetTestServer().CreateWebSocketClient().ConnectAsync(new Uri("ws://localhost/ws/game"));
+        var socket = await app.GetTestServer().CreateWebSocketClient().ConnectAsync(new Uri("ws://localhost/ws/game"), CancellationToken.None);
         await SendAsync(socket, new { type = "auth", version = 2, accessToken = $"{owner:N}.test-access-token" });
         (await ReceiveTypeAsync(socket, "auth-ok")).Dispose();
         var name = $"Hero{index}";
@@ -129,7 +129,7 @@ public sealed class GameSocketTests
         SendAsync(player.Socket, new { type = "move", sequence = ++player.Sequence, dx, dy });
 
     private static Task SendAsync(WebSocket socket, object value) =>
-        socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(value), WebSocketMessageType.Text, true, CancellationToken.None).AsTask();
+        socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(value), WebSocketMessageType.Text, true, CancellationToken.None);
 
     private static Task<JsonDocument> ReceiveTypeAsync(WebSocket socket, string type) =>
         ReceiveMatchingAsync(socket, type, _ => true);
