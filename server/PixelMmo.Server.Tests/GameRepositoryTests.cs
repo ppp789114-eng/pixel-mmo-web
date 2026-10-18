@@ -35,7 +35,7 @@ public sealed class GameRepositoryTests
 
         var reloaded = string.IsNullOrWhiteSpace(TestDatabase.ConnectionString) ? repository : TestDatabase.CreateRepository();
         var saved = Assert.Single(await reloaded.GetCharactersAsync(character.OwnerId));
-        var essence = Assert.Single((await reloaded.GetInventoryAsync(character.Id)).Where(item => item.ItemKey == "slime_essence"));
+        var essence = Assert.Single(await reloaded.GetInventoryAsync(character.Id), item => item.ItemKey == "slime_essence");
         Assert.True(first.Applied);
         Assert.False(duplicate.Applied);
         Assert.Equal(20L, saved.Experience);
@@ -75,7 +75,7 @@ public sealed class GameRepositoryTests
         Assert.True(first.Applied);
         Assert.False(repeated.Applied);
         Assert.Equal(30L, repeated.Character.Experience);
-        Assert.Equal(1, Assert.Single(repeated.Inventory.Where(item => item.ItemKey == "moonstone")).Quantity);
+        Assert.Equal(1, Assert.Single(repeated.Inventory, item => item.ItemKey == "moonstone").Quantity);
     }
 
     [Fact]
