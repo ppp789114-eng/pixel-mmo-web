@@ -180,6 +180,7 @@ public sealed class GameSocketTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var token = request.Headers.Authorization?.Parameter ?? string.Empty;
+            Console.WriteLine($"Stub Supabase auth handler received a {token.Length}-character token.");
             var userId = token.Length >= 32 && Guid.TryParseExact(token[..32], "N", out var parsed) ? parsed : Guid.Empty;
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
