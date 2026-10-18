@@ -67,6 +67,7 @@ public sealed class GameSocketHandler(
             var characters = await repository.GetCharactersAsync(ownerId.Value, context.RequestAborted);
             logger.LogInformation("Sending auth-ok with {CharacterCount} characters.", characters.Count);
             await SendAsync(socket, new AuthOkMessage("auth-ok", GameRules.ProtocolVersion, characters), context.RequestAborted);
+            logger.LogInformation("Auth response send completed.");
 
             while (socket.State == WebSocketState.Open && !context.RequestAborted.IsCancellationRequested)
             {

@@ -159,6 +159,7 @@ public sealed class GameSocketTests
             using var document = JsonDocument.Parse(output.WrittenMemory);
             output.Clear();
             var root = document.RootElement;
+            if (type == "auth-ok") Console.WriteLine($"Received while waiting for auth-ok: {root.GetRawText()}");
             if (root.TryGetProperty("type", out var responseType) && responseType.GetString() == "error" && type != "error")
                 throw new InvalidOperationException($"Server returned an error while waiting for '{type}': {root.GetRawText()}");
             if (root.TryGetProperty("type", out var actualType) && actualType.GetString() == type && predicate(root))
