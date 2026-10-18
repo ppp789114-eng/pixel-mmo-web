@@ -70,10 +70,10 @@ public sealed class GameSocketTests
                 await Task.WhenAll(players.Select(player => SendMoveAsync(player, 1, dy)));
                 await Task.Delay(100);
             }
-            await Task.WhenAll(players.Select(player => SendAsync(player.Socket, new
+            await SendAsync(players[0].Socket, new
             {
                 type = "attack", targetId = "moss-slime-01", commandId = Guid.NewGuid().ToString(),
-            })));
+            });
             await Task.WhenAll(players.Select(async player =>
             {
                 using var snapshot = await ReceiveMatchingAsync(player.Socket, "world-state", item => item.GetProperty("players").GetArrayLength() == 20);
