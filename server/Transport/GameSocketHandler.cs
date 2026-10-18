@@ -24,10 +24,12 @@ public sealed class GameSocketHandler(
         }
 
         using var socket = await context.WebSockets.AcceptWebSocketAsync();
+        logger.LogInformation("Game WebSocket accepted.");
         GameSession? session = null;
         try
         {
             var firstFrame = await ReceiveFrameAsync(socket, context.RequestAborted);
+            logger.LogInformation("Game WebSocket first frame received: {HasFrame}, {Length} bytes.", firstFrame is not null, firstFrame?.Length ?? 0);
             if (firstFrame is null) return;
             using var authDocument = ParseFrame(firstFrame);
             var authMessage = authDocument.RootElement;
@@ -56,12 +58,15 @@ public sealed class GameSocketHandler(
                 await RejectAsync(socket, "auth-unavailable", "Authentication is temporarily unavailable.", context.RequestAborted);
                 return;
             }
+            logger.LogInformation("Game WebSocket authentication result: {Authenticated}.", ownerId is not null);
             if (ownerId is null)
             {
                 await RejectAsync(socket, "invalid-token", "Your login has expired. Sign in again.", context.RequestAborted);
                 return;
             }
-            await SendAsync(socket, new AuthOkMessage("auth-ok", GameRules.ProtocolVersion, await repository.GetCharactersAsync(ownerId.Value, context.RequestAborted)), context.RequestAborted);
+            var characters = await repository.GetCharactersAsync(ownerId.Value, context.RequestAborted);
+            logger.LogInformation("Sending auth-ok with {CharacterCount} characters.", characters.Count);
+            await SendAsync(socket, new AuthOkMessage("auth-ok", GameRules.ProtocolVersion, characters), context.RequestAborted);
 
             while (socket.State == WebSocketState.Open && !context.RequestAborted.IsCancellationRequested)
             {
