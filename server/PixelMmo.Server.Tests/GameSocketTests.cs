@@ -5,8 +5,9 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PixelMmo.Server.Game;
@@ -24,7 +25,7 @@ public sealed class GameSocketTests
     public async Task TwentyPlayersShareOneMapAndForgedRewardsAreRejected()
     {
         var builder = WebApplication.CreateBuilder();
-        builder.WebHost.UseTestServer();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Supabase:Url"] = "https://auth.test",
@@ -42,8 +43,11 @@ public sealed class GameSocketTests
         app.UseWebSockets();
         app.Map("/ws/game", async (HttpContext context, GameSocketHandler handler) => await handler.HandleAsync(context));
         await app.StartAsync();
+        var serverAddress = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses.Single()
+            ?? throw new InvalidOperationException("Kestrel did not report its bound address.");
+        var socketUri = new UriBuilder(serverAddress) { Scheme = "ws", Path = "/ws/game" }.Uri;
 
-        var players = await Task.WhenAll(Enumerable.Range(0, 20).Select(index => ConnectAndCreateAsync(app, index)));
+        var players = await Task.WhenAll(Enumerable.Range(0, 20).Select(index => ConnectAndCreateAsync(socketUri, index)));
         try
         {
             for (var step = 0; step < 7; step++)
@@ -89,7 +93,8 @@ public sealed class GameSocketTests
             Assert.Equal("unknown-command", rejected.RootElement.GetProperty("code").GetString());
 
             players[0].Socket.Dispose();
-            var reconnect = await app.GetTestServer().CreateWebSocketClient().ConnectAsync(new Uri("ws://localhost/ws/game"), CancellationToken.None);
+            var reconnect = new ClientWebSocket();
+            await reconnect.ConnectAsync(socketUri, CancellationToken.None);
             try
             {
                 await SendAsync(reconnect, new { type = "auth", version = 2, accessToken = $"{players[0].OwnerId:N}.test-access-token" });
@@ -110,11 +115,12 @@ public sealed class GameSocketTests
         }
     }
 
-    private static async Task<TestPlayer> ConnectAndCreateAsync(WebApplication app, int index)
+    private static async Task<TestPlayer> ConnectAndCreateAsync(Uri socketUri, int index)
     {
         var owner = Guid.NewGuid();
         await TestDatabase.SeedOwnerAsync(owner);
-        var socket = await app.GetTestServer().CreateWebSocketClient().ConnectAsync(new Uri("ws://localhost/ws/game"), CancellationToken.None);
+        var socket = new ClientWebSocket();
+        await socket.ConnectAsync(socketUri, CancellationToken.None);
         await SendAsync(socket, new { type = "auth", version = 2, accessToken = $"{owner:N}.test-access-token" });
         try { (await ReceiveTypeAsync(socket, "auth-ok")).Dispose(); }
         catch (TimeoutException exception) { throw new TimeoutException($"Player {index} did not receive the initial auth response.", exception); }
@@ -134,7 +140,7 @@ public sealed class GameSocketTests
     private static async Task SendAsync(WebSocket socket, object value)
     {
         using var timeout = new CancellationTokenSource(SocketTimeout);
-        await socket.SendAsync(new ArraySegment<byte>(JsonSerializer.SerializeToUtf8Bytes(value)), WebSocketMessageType.Text, true, timeout.Token);
+        await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(value), WebSocketMessageType.Text, true, timeout.Token);
     }
 
     private static Task<JsonDocument> ReceiveTypeAsync(WebSocket socket, string type) =>
@@ -147,8 +153,8 @@ public sealed class GameSocketTests
         var output = new ArrayBufferWriter<byte>();
         while (true)
         {
-            WebSocketReceiveResult result;
-            try { result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), timeout.Token); }
+            ValueWebSocketReceiveResult result;
+            try { result = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token); }
             catch (OperationCanceledException exception) when (timeout.IsCancellationRequested)
             {
                 throw new TimeoutException($"Timed out waiting for WebSocket message '{type}'.", exception);
