@@ -18,6 +18,8 @@ namespace PixelMmo.Server.Tests;
 
 public sealed class GameSocketTests
 {
+    private static readonly TimeSpan SocketTimeout = TimeSpan.FromSeconds(20);
+
     [Fact]
     public async Task TwentyPlayersShareOneMapAndForgedRewardsAreRejected()
     {
@@ -128,19 +130,28 @@ public sealed class GameSocketTests
     private static Task SendMoveAsync(TestPlayer player, int dx, int dy) =>
         SendAsync(player.Socket, new { type = "move", sequence = ++player.Sequence, dx, dy });
 
-    private static Task SendAsync(WebSocket socket, object value) =>
-        socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(value), WebSocketMessageType.Text, true, CancellationToken.None);
+    private static async Task SendAsync(WebSocket socket, object value)
+    {
+        using var timeout = new CancellationTokenSource(SocketTimeout);
+        await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(value), WebSocketMessageType.Text, true, timeout.Token);
+    }
 
     private static Task<JsonDocument> ReceiveTypeAsync(WebSocket socket, string type) =>
         ReceiveMatchingAsync(socket, type, _ => true);
 
     private static async Task<JsonDocument> ReceiveMatchingAsync(WebSocket socket, string type, Func<JsonElement, bool> predicate)
     {
+        using var timeout = new CancellationTokenSource(SocketTimeout);
         var buffer = new byte[8192];
         var output = new ArrayBufferWriter<byte>();
         while (true)
         {
-            var result = await socket.ReceiveAsync(buffer.AsMemory(), CancellationToken.None);
+            ValueWebSocketReceiveResult result;
+            try { result = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token); }
+            catch (OperationCanceledException exception) when (timeout.IsCancellationRequested)
+            {
+                throw new TimeoutException($"Timed out waiting for WebSocket message '{type}'.", exception);
+            }
             if (result.MessageType == WebSocketMessageType.Close) throw new WebSocketException("Socket closed before expected message.");
             output.Write(buffer.AsSpan(0, result.Count));
             if (!result.EndOfMessage) continue;
