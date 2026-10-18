@@ -24,12 +24,10 @@ public sealed class GameSocketHandler(
         }
 
         using var socket = await context.WebSockets.AcceptWebSocketAsync();
-        Console.WriteLine("WebSocket accepted.");
         GameSession? session = null;
         try
         {
             var firstFrame = await ReceiveFrameAsync(socket, context.RequestAborted);
-            Console.WriteLine($"Auth frame received: {firstFrame?.Length ?? 0} bytes.");
             if (firstFrame is null) return;
             using var authDocument = ParseFrame(firstFrame);
             var authMessage = authDocument.RootElement;
@@ -58,14 +56,12 @@ public sealed class GameSocketHandler(
                 await RejectAsync(socket, "auth-unavailable", "Authentication is temporarily unavailable.", context.RequestAborted);
                 return;
             }
-            Console.WriteLine($"Auth validated: {ownerId is not null}.");
             if (ownerId is null)
             {
                 await RejectAsync(socket, "invalid-token", "Your login has expired. Sign in again.", context.RequestAborted);
                 return;
             }
             var characters = await repository.GetCharactersAsync(ownerId.Value, context.RequestAborted);
-            Console.WriteLine($"Sending auth-ok with {characters.Count} characters.");
             await SendAsync(socket, new AuthOkMessage("auth-ok", GameRules.ProtocolVersion, characters), context.RequestAborted);
 
             while (socket.State == WebSocketState.Open && !context.RequestAborted.IsCancellationRequested)
@@ -177,7 +173,6 @@ public sealed class GameSocketHandler(
     {
         if (socket.State != WebSocketState.Open) return;
         var bytes = JsonSerializer.SerializeToUtf8Bytes(message, JsonOptions);
-        if (message is AuthOkMessage) Console.WriteLine($"Auth-ok payload: {Convert.ToHexString(bytes)}");
         await socket.SendAsync(bytes, WebSocketMessageType.Text, true, cancellationToken);
     }
 
