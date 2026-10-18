@@ -1,0 +1,70 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pixel-mmo-client
+          path: client/dist
+          if-no-files-found: error
+
+  server:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet build server/PixelMmo.Server.csproj --configuration Release
+      - name: Apply migrations to temporary PostgreSQL
+        env:
+          PGPASSWORD: test-password
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+          psql --host localhost --username postgres --dbname postgres --set ON_ERROR_STOP=1 --command "create role anon nologin; create role authenticated nologin; create schema auth; create table auth.users (id uuid primary key);"
+          psql --host localhost --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/migrations/001_game_core.sql
+          psql --host localhost --username postgres --dbname postgres --set ON_ERROR_STOP=1 --command "insert into auth.users (id) values ('00000000-0000-0000-0000-000000000001'); insert into public.game_characters (id, owner_id, name, job, level, experience, x, y, hp, mp, gold) values ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Legacy', 'Swordsman', 1, 0, 7, 8, 100, 40, 0);"
+          psql --host localhost --username postgres --dbname postgres --set ON_ERROR_STOP=1 --file supabase/migrations/002_phase_one_world.sql
+          psql --host localhost --username postgres --dbname postgres --set ON_ERROR_STOP=1 --command "do \$\$ begin if not exists (select 1 from public.game_characters where id = '00000000-0000-0000-0000-000000000002' and map_id = 'verdant-field') then raise exception 'legacy character was not preserved'; end if; if not exists (select 1 from public.game_inventory where character_id = '00000000-0000-0000-0000-000000000002' and item_key = 'iron_sword' and quantity = 1) then raise exception 'legacy starter weapon was not added'; end if; end; \$\$;"
+      - run: dotnet test server/PixelMmo.Server.Tests/PixelMmo.Server.Tests.csproj --configuration Release
+        env:
+          ConnectionStrings__GameDatabase: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=test-password;SSL Mode=Disable
+

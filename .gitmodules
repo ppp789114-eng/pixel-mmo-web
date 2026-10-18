@@ -1,0 +1,3 @@
+[submodule "client/public/assets"]
+	path = client/public/assets
+	url = https://github.com/ppp789114-eng/pixel-mmo-assets.git

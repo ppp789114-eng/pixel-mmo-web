@@ -1,0 +1,28 @@
+# Local configuration
+.env
+.env.*
+!.env.example
+!**/.env.example
+**/appsettings.Local.json
+
+# Node
+node_modules/
+client/dist/
+client/coverage/
+
+# .NET
+**/bin/
+**/obj/
+**/TestResults/
+
+# Editor and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Never commit proprietary or unlicensed game assets
+assets-private/
+*.psd
+*.aseprite
+*.ase

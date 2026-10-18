@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101318" />
+    <meta name="description" content="Isometric pixel fantasy MMO prototype" />
+    <title>Pixel MMO — Test Realm</title>
+  </head>
+  <body>
+    <main id="app" class="app-shell">
+      <section class="game-frame" aria-label="Pixel MMO game">
+        <header class="topbar">
+          <div class="brand"><span class="brand-mark">✦</span><div><strong>AEther Vale</strong><small>TEST REALM · CHAPTER 01</small></div></div>
+          <div class="realm-status"><span class="status-dot"></span><span id="connection-label">LOCAL PREVIEW</span><span class="separator">/</span><span id="map-label">Lumen Town</span></div>
+          <button id="effects-toggle" class="quiet-button" type="button" aria-pressed="true">✧ Effects: On</button>
+        </header>
+
+        <div class="game-stage">
+          <div id="game" class="canvas-host"></div>
+          <div class="hud-top-left">
+            <div class="portrait">✦</div>
+            <div class="status-bars">
+              <div class="character-line"><strong id="character-name">Wayfarer</strong><span id="character-job">Novice</span></div>
+              <div class="bar-row"><span>HP</span><div class="bar"><i id="hp-bar" class="hp-fill"></i></div><b id="hp-value">100 / 100</b></div>
+              <div class="bar-row"><span>MP</span><div class="bar"><i id="mp-bar" class="mp-fill"></i></div><b id="mp-value">40 / 40</b></div>
+              <div class="bar-row xp-row"><span>XP</span><div class="bar"><i id="xp-bar" class="xp-fill"></i></div><b id="xp-value">Lv. 1 · 0%</b></div>
+              <div id="inventory-label" class="inventory-label">Bag empty</div>
+            </div>
+          </div>
+
+          <div class="quest-card">
+            <div class="quest-kicker">✧ FIELD NOTE</div>
+            <strong>First field note</strong>
+            <span>Speak with Elder Lyra in town.</span>
+            <div class="quest-progress"><i></i><small id="quest-count">0 / 1</small></div>
+          </div>
+
+          <div class="world-toast" id="world-toast" role="status" aria-live="polite">Move with WASD or arrow keys · Attack with Space · Cast with 1</div>
+          <div id="overlay" class="overlay" aria-live="polite">
+            <div class="login-card">
+              <div class="login-sigil">✦</div>
+              <p class="eyebrow">A SMALL WORLD, WAITING</p>
+              <h1>Enter the Vale</h1>
+              <p class="login-copy">A hand-built isometric pixel world. Find your path, meet the glade, and make a little magic.</p>
+              <button id="google-login" class="primary-button" type="button">Continue with Google</button>
+              <button id="demo-login" class="secondary-button" type="button">Play local demo</button>
+              <p id="auth-note" class="auth-note">Local demo progress is temporary. Online play needs a configured server.</p>
+              <div id="character-form" class="character-form hidden">
+                <label for="character-input">Character name</label>
+                <input id="character-input" maxlength="18" value="Wayfarer" autocomplete="off" />
+                <label for="job-select">Starting path</label>
+                <select id="job-select"><option value="Swordsman">Swordsman</option><option value="Mage">Mage</option></select>
+                <button id="create-character" class="primary-button" type="button">Create character</button>
+              </div>
+              <div id="character-list" class="character-list hidden"></div>
+            </div>
+          </div>
+
+          <div class="bottom-ui">
+            <div class="chat-panel">
+            <div class="chat-heading"><span>MAP CHAT</span><span id="online-count">1 adventurer nearby</span></div>
+              <div id="chat-log" class="chat-log" aria-live="polite"><p><b class="system-name">SYSTEM</b> The glade is quiet. Your story begins here.</p></div>
+              <form id="chat-form" class="chat-form"><span>›</span><input id="chat-input" maxlength="160" placeholder="Say something kind…" autocomplete="off" /><button type="submit" aria-label="Send message">↗</button></form>
+            </div>
+            <div class="action-bar" aria-label="Abilities">
+              <div class="action-slot active"><kbd>SPACE</kbd><span class="skill-icon sword-icon">✧</span><small>Strike</small></div>
+              <div class="action-slot"><kbd>1</kbd><span class="skill-icon spell-icon">✴</span><small>Starbolt</small></div>
+              <div class="action-slot muted"><kbd>2</kbd><span class="skill-icon leaf-icon">❋</span><small>Gather</small></div>
+              <button id="equip-button" class="action-slot"><kbd>I</kbd><span class="skill-icon bag-icon">▣</span><small id="weapon-label">None</small><small>Essence <b id="essence-count">0</b></small></button>
+            </div>
+              <div class="minimap"><span id="minimap-title" class="minimap-title">LUMEN<br />TOWN</span><i class="map-marker"></i><i class="map-pulse"></i><span id="minimap-coords" class="minimap-coords">EASTERN GATE</span></div>
+          </div>
+        </div>
+        <footer class="footer-line"><span>WASD / ARROWS MOVE</span><span>E INTERACT / GATE</span><span>SPACE ATTACK</span><span>1 CAST STARBOLT</span><span class="footer-version">PROTOTYPE 0.2 · ORIGINAL ART</span></footer>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
