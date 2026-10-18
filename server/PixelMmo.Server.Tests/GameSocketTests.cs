@@ -116,7 +116,8 @@ public sealed class GameSocketTests
         await TestDatabase.SeedOwnerAsync(owner);
         var socket = await app.GetTestServer().CreateWebSocketClient().ConnectAsync(new Uri("ws://localhost/ws/game"), CancellationToken.None);
         await SendAsync(socket, new { type = "auth", version = 2, accessToken = $"{owner:N}.test-access-token" });
-        (await ReceiveTypeAsync(socket, "auth-ok")).Dispose();
+        try { (await ReceiveTypeAsync(socket, "auth-ok")).Dispose(); }
+        catch (TimeoutException exception) { throw new TimeoutException($"Player {index} did not receive the initial auth response.", exception); }
         var name = $"Hero{index}";
         await SendAsync(socket, new { type = "create-character", name, job = "Swordsman" });
         Guid characterId;
@@ -158,6 +159,8 @@ public sealed class GameSocketTests
             using var document = JsonDocument.Parse(output.WrittenMemory);
             output.Clear();
             var root = document.RootElement;
+            if (root.TryGetProperty("type", out var responseType) && responseType.GetString() == "error" && type != "error")
+                throw new InvalidOperationException($"Server returned an error while waiting for '{type}': {root.GetRawText()}");
             if (root.TryGetProperty("type", out var actualType) && actualType.GetString() == type && predicate(root))
                 return JsonDocument.Parse(root.GetRawText());
         }
