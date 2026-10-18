@@ -28,7 +28,7 @@ public sealed class GameSocketTests
             ["Supabase:Url"] = "https://auth.test",
             ["Supabase:PublishableKey"] = "test-key",
             ["ConnectionStrings:GameDatabase"] = TestDatabase.ConnectionString,
-            ["Game:SnapshotIntervalMs"] = "100",
+            ["Game:SnapshotIntervalMs"] = "1000",
             ["Game:MoveCooldownMs"] = "80",
         });
         builder.Services.AddHttpClient<SupabaseAuthService>().ConfigurePrimaryHttpMessageHandler(() => new StubAuthHandler());
