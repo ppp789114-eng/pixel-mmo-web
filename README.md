@@ -89,5 +89,8 @@ From the project root: `dotnet build server/PixelMmo.Server.csproj --configurati
 `dotnet test server/PixelMmo.Server.Tests/PixelMmo.Server.Tests.csproj --configuration Release`.
 
 GitHub Actions runs the client/server checks and applies both migrations to a temporary PostgreSQL instance on pushes
-and pull requests. It also publishes the static client to GitHub Pages from `main`; repository variables can later
-provide the Supabase URL/key and public game-server WSS URL. Never use repository secrets for browser-exposed values.
+and pull requests. It also publishes the static client to GitHub Pages from `main`. Set these repository variables
+under **Settings → Secrets and variables → Actions → Variables** for authenticated multiplayer builds:
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_GAME_SERVER_URL` (the public `wss://` URL).
+The Supabase publishable key is meant for browsers; never use a database password, Supabase secret key, or service-role
+key in a `VITE_` variable or GitHub Pages build. If a variable is unset, the Pages build still works in local-demo mode.
