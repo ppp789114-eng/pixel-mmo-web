@@ -13,7 +13,6 @@ var app = builder.Build();
 app.UseWebSockets(new WebSocketOptions
 {
     KeepAliveInterval = TimeSpan.FromSeconds(25),
-    ReceiveBufferSize = 8 * 1024,
 });
 
 app.MapGet("/healthz", (GameRepository repository) => Results.Ok(new
