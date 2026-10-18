@@ -162,6 +162,7 @@ public sealed class GameSocketTests
             if (result.MessageType == WebSocketMessageType.Close) throw new WebSocketException("Socket closed before expected message.");
             output.Write(buffer.AsSpan(0, result.Count));
             if (!result.EndOfMessage) continue;
+            if (type == "auth-ok") Console.WriteLine($"Received auth payload: {Convert.ToHexString(output.WrittenSpan)}");
             using var document = JsonDocument.Parse(output.WrittenMemory);
             output.Clear();
             var root = document.RootElement;
