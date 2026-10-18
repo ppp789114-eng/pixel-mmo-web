@@ -134,7 +134,7 @@ public sealed class GameSocketTests
     private static async Task SendAsync(WebSocket socket, object value)
     {
         using var timeout = new CancellationTokenSource(SocketTimeout);
-        await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(value), WebSocketMessageType.Text, true, timeout.Token);
+        await socket.SendAsync(new ArraySegment<byte>(JsonSerializer.SerializeToUtf8Bytes(value)), WebSocketMessageType.Text, true, timeout.Token);
     }
 
     private static Task<JsonDocument> ReceiveTypeAsync(WebSocket socket, string type) =>
@@ -147,8 +147,8 @@ public sealed class GameSocketTests
         var output = new ArrayBufferWriter<byte>();
         while (true)
         {
-            ValueWebSocketReceiveResult result;
-            try { result = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token); }
+            WebSocketReceiveResult result;
+            try { result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), timeout.Token); }
             catch (OperationCanceledException exception) when (timeout.IsCancellationRequested)
             {
                 throw new TimeoutException($"Timed out waiting for WebSocket message '{type}'.", exception);
@@ -159,7 +159,6 @@ public sealed class GameSocketTests
             using var document = JsonDocument.Parse(output.WrittenMemory);
             output.Clear();
             var root = document.RootElement;
-            if (type == "auth-ok") Console.WriteLine($"Received while waiting for auth-ok: {root.GetRawText()}");
             if (root.TryGetProperty("type", out var responseType) && responseType.GetString() == "error" && type != "error")
                 throw new InvalidOperationException($"Server returned an error while waiting for '{type}': {root.GetRawText()}");
             if (root.TryGetProperty("type", out var actualType) && actualType.GetString() == type && predicate(root))
@@ -181,7 +180,6 @@ public sealed class GameSocketTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var token = request.Headers.Authorization?.Parameter ?? string.Empty;
-            Console.WriteLine($"Stub Supabase auth handler received a {token.Length}-character token.");
             var userId = token.Length >= 32 && Guid.TryParseExact(token[..32], "N", out var parsed) ? parsed : Guid.Empty;
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -191,3 +189,4 @@ public sealed class GameSocketTests
         }
     }
 }
+

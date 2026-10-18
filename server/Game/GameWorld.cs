@@ -288,7 +288,7 @@ public sealed class GameWorld : BackgroundService
         try
         {
             if (session.Socket.State == WebSocketState.Open)
-                await session.Socket.SendAsync(bytes, WebSocketMessageType.Text, true, cancellationToken);
+                await session.Socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
         }
         catch (WebSocketException) { }
         finally { session.SendGate.Release(); }
@@ -380,3 +380,4 @@ public sealed record QuestMessage(string Type, QuestState Quest);
 public sealed record QuestRewardMessage(string Type, long Experience, bool Applied);
 public sealed record ChatMessage(string Type, string Name, string Text, bool System);
 public sealed record ErrorMessage(string Type, string Code, string Message);
+

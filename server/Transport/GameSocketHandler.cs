@@ -67,7 +67,6 @@ public sealed class GameSocketHandler(
             var characters = await repository.GetCharactersAsync(ownerId.Value, context.RequestAborted);
             logger.LogInformation("Sending auth-ok with {CharacterCount} characters.", characters.Count);
             await SendAsync(socket, new AuthOkMessage("auth-ok", GameRules.ProtocolVersion, characters), context.RequestAborted);
-            logger.LogInformation("Auth response send completed.");
 
             while (socket.State == WebSocketState.Open && !context.RequestAborted.IsCancellationRequested)
             {
@@ -165,7 +164,7 @@ public sealed class GameSocketHandler(
         var buffer = new byte[1024];
         while (true)
         {
-            var result = await socket.ReceiveAsync(buffer.AsMemory(), cancellationToken);
+            var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
             if (result.MessageType == WebSocketMessageType.Close) return null;
             if (result.MessageType != WebSocketMessageType.Text) throw new WebSocketException("Only text messages are accepted.");
             if (output.WrittenCount + result.Count > MaxMessageBytes) throw new WebSocketException("Message exceeds the size limit.");
@@ -178,7 +177,7 @@ public sealed class GameSocketHandler(
     {
         if (socket.State != WebSocketState.Open) return;
         var bytes = JsonSerializer.SerializeToUtf8Bytes(message, JsonOptions);
-        await socket.SendAsync(bytes, WebSocketMessageType.Text, true, cancellationToken);
+        await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
     }
 
     private static async Task RejectAsync(WebSocket socket, string code, string message, CancellationToken cancellationToken)
@@ -207,3 +206,4 @@ public sealed class GameSocketHandler(
 }
 
 public sealed record AuthOkMessage(string Type, int ProtocolVersion, IReadOnlyList<GameCharacter> Characters);
+
